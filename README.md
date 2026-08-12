@@ -1,234 +1,283 @@
-# Book Management REST API
+# 📚 Book Management REST API
 
-> A production-ready Book Management REST API built with Django REST Framework featuring JWT authentication, filtering, searching, ordering, pagination, and rate limiting.
+A production-ready **Book Management REST API** built with **Django REST Framework (DRF)**. It provides secure JWT authentication, book management, filtering, searching, ordering, pagination, request throttling, and comprehensive API endpoints.
 
 ---
 
 ## 📋 Table of Contents
 
-- [Overview](#overview)
-- [Request Flow](#request-flow)
-- [Project Structure](#project-structure)
-- [Features](#features)
-- [Installation](#installation)
-- [Configuration](#configuration)
-- [API Documentation](#api-documentation)
-- [Testing](#testing)
-- [Deployment](#deployment)
-- [Contributing](#contributing)
-- [License](#license)
+- [Overview](#-overview)
+- [Key Technologies](#-key-technologies)
+- [Request Flow](#-request-flow)
+- [Project Structure](#-project-structure)
+- [Features](#-features)
+- [Installation](#-installation)
+- [Configuration](#-configuration)
+- [API Documentation](#-api-documentation)
+- [Query Parameters](#-query-parameters)
+- [Testing](#-testing)
+- [Error Handling](#-error-handling)
+- [Deployment](#-deployment)
+- [Contributing](#-contributing)
+- [License](#-license)
 
 ---
 
-## Overview
+## 📖 Overview
 
-This is a production-grade REST API for managing books with complete authentication and authorization controls. The API implements industry best practices including JWT-based authentication, request throttling, comprehensive filtering, and pagination.
+The **Book Management REST API** is a Django-based backend application designed to manage book information through RESTful API endpoints.
 
-**Key Technologies:**
-- Django 4.2.7
-- Django REST Framework 3.14.0
-- JWT Authentication (Simple JWT)
-- Django Filter
-- SQLite3 (Development) / PostgreSQL (Production)
+The API follows REST principles and includes authentication, authorization, filtering, searching, ordering, pagination, and request throttling.
+
+### Key Technologies
+
+| Technology | Version / Purpose |
+|---|---|
+| **Python** | 3.10+ |
+| **Django** | 4.2.7 |
+| **Django REST Framework** | 3.14.0 |
+| **Simple JWT** | JWT authentication |
+| **Django Filter** | Filtering and advanced queries |
+| **SQLite3** | Development database |
+| **PostgreSQL** | Recommended production database |
 
 ---
 
-## Request Flow
+## 🔄 Request Flow
 
-Understanding the request lifecycle helps debug issues and understand how the application works:
+The following flow shows how a typical API request is processed:
 
-```
-Client Request (GET /books/?search=Python)
-    │
-    ▼
+```text
+Client Request
+     │
+     │  GET /api/books/?search=Python
+     ▼
 book_management/urls.py
-    │  └── Routes request to appropriate app
-    ▼
+     │
+     │ Routes request to the books application
+     ▼
 books/urls.py
-    │  └── DefaultRouter maps /books/ to BookViewSet
-    ▼
+     │
+     │ DefaultRouter maps the request
+     ▼
 books/views.py
-    │  └── BookViewSet.list() executes
-    │      ├── 1. Queryset: Book.objects.all()
-    │      ├── 2. Filter Backends:
-    │      │   ├── DjangoFilterBackend (category, author)
-    │      │   ├── SearchFilter (title, author)
-    │      │   └── OrderingFilter (title, price, published_date)
-    │      ├── 3. Pagination: 5 results per page
-    │      └── 4. Permission Check: AllowAny (GET requests are public)
-    ▼
+     │
+     │ BookViewSet processes the request
+     ├── Queryset: Book.objects.all()
+     ├── Filtering: category, author
+     ├── Searching: title, author
+     ├── Ordering: title, price, published_date
+     ├── Pagination: 5 books per page
+     └── Permission check
+     ▼
 books/serializers.py
-    │  └── BookSerializer converts Book objects to JSON
-    ▼
-JSON Response (Returns to Client)
+     │
+     │ Converts Book objects to JSON
+     ▼
+JSON Response
+     │
+     ▼
+Client
 ```
 
-**For POST/PUT/DELETE Requests:**
-- Permission check occurs before processing: `IsAuthenticated` required
-- Serializer validates incoming JSON data
-- Data is converted to Book object (deserialization)
-- Valid data is saved to database
-- Response returns the created/updated object
+### For POST, PUT, PATCH, and DELETE Requests
+
+1. The API checks whether the user is authenticated.
+2. The serializer validates the submitted data.
+3. Valid data is converted into a Book object.
+4. The object is saved or updated in the database.
+5. The API returns an appropriate response.
 
 ---
 
-## Project Structure
+## 📁 Project Structure
 
-```
+```text
 book_management/
-├── manage.py                      # Django's command-line utility
-├── requirements.txt               # Project dependencies
-├── .env.example                   # Environment variables template
-├── .gitignore                     # Git ignore file
-├── README.md                      # This file
 │
-├── book_management/               # Project configuration
+├── manage.py
+├── requirements.txt
+├── .env.example
+├── .gitignore
+├── README.md
+│
+├── book_management/
 │   ├── __init__.py
-│   ├── settings.py                # All project settings
-│   ├── urls.py                    # Main URL configuration
-│   ├── asgi.py                    # ASGI configuration
-│   └── wsgi.py                    # WSGI configuration
+│   ├── settings.py
+│   ├── urls.py
+│   ├── asgi.py
+│   └── wsgi.py
 │
-└── books/                         # Main application
+└── books/
     ├── __init__.py
-    ├── admin.py                   # Django admin configuration
-    ├── apps.py                    # App configuration
-    ├── models.py                  # Database models
-    ├── serializers.py             # Serializers (JSON ↔ Objects)
-    ├── views.py                   # View logic (BookViewSet)
-    ├── urls.py                    # App URL routing
-    ├── permissions.py             # Custom permissions
-    ├── filters.py                 # Custom filter sets
-    ├── tests.py                   # Unit tests
-    └── migrations/                # Database migrations
+    ├── admin.py
+    ├── apps.py
+    ├── models.py
+    ├── serializers.py
+    ├── views.py
+    ├── urls.py
+    ├── permissions.py
+    ├── filters.py
+    ├── tests.py
+    └── migrations/
         └── __init__.py
 ```
 
 ### File Responsibilities
 
-| File | Purpose |
-|------|---------|
-| **models.py** | Defines the Book table schema (title, author, category, price, published_date) |
-| **serializers.py** | Handles conversion between Book objects and JSON; validates incoming data |
-| **views.py** | Contains business logic - what happens for each request (GET, POST, PUT, DELETE) |
-| **permissions.py** | Custom permission classes for granular access control |
-| **filters.py** | Custom filter definitions for advanced querying |
-| **urls.py** | Maps URL patterns to views/ViewSets |
-| **settings.py** | All configuration: JWT, throttling, pagination, database, installed apps |
+| File | Responsibility |
+|---|---|
+| `models.py` | Defines the Book database model |
+| `serializers.py` | Converts objects to/from JSON and validates data |
+| `views.py` | Handles API request and business logic |
+| `permissions.py` | Defines access-control rules |
+| `filters.py` | Provides custom filtering functionality |
+| `urls.py` | Defines API routes |
+| `settings.py` | Contains project configuration |
 
 ---
 
-## Features
+## ✨ Features
 
-### Core Features
+### 📚 Book Management
 
-| Feature | Implementation | Status |
-|---------|---------------|--------|
-| **REST API** | Django REST Framework (ViewSets + Routers) | ✅ |
-| **Book Model** | Complete with title, author, category, price, published_date | ✅ |
-| **Serialization** | BookSerializer with field validation | ✅ |
+- Create books
+- View all books
+- View individual books
+- Update books
+- Delete books
+- Validate book information
 
-### Authentication & Authorization
+### 🔐 Authentication & Authorization
 
-| Feature | Implementation | Status |
-|---------|---------------|--------|
-| **JWT Authentication** | Simple JWT library | ✅ |
-| **Token Endpoint** | `/api/token/` - Obtain access token | ✅ |
-| **Refresh Endpoint** | `/api/token/refresh/` - Refresh expired token | ✅ |
-| **Protected Endpoints** | Create, Update, Delete require authentication | ✅ |
-| **Public Endpoints** | View books open to everyone | ✅ |
+- JWT-based authentication
+- Access and refresh tokens
+- Protected write operations
+- Public read operations
+- Permission-based access control
 
-### Query Capabilities
+### 🔎 Query Features
 
-| Feature | Implementation | Status |
-|---------|---------------|--------|
-| **Filtering** | By category and author using `filterset_fields` | ✅ |
-| **Searching** | By title and author using `search_fields` | ✅ |
-| **Ordering** | By title, price, published_date using `ordering_fields` | ✅ |
-| **Pagination** | 5 books per page (PageNumberPagination) | ✅ |
-| **Throttling** | Rate limiting: 100/day for anonymous, 1000/day for users | ✅ |
+- Filter books by category
+- Filter books by author
+- Search by title or author
+- Sort results by title, price, or publication date
+- Paginate results
+- Request throttling
 
-### Combined Query Example
+### ⚡ API Limits
 
-```
-GET /books/?search=Python&ordering=-price&page=2
-```
+| User Type | Request Limit |
+|---|---:|
+| Anonymous users | 100 requests/day |
+| Authenticated users | 1,000 requests/day |
 
-This single request:
-- Searches books containing "Python"
-- Orders results by price (highest first)
-- Returns the second page of results (5 items per page)
-- Applies rate limiting
+The default pagination size is **5 books per page**, with a maximum page size of **100**.
 
 ---
 
-## Installation
+## 🚀 Installation
 
 ### Prerequisites
 
-- Python 3.10+
-- pip (Python package manager)
-- Virtual environment (recommended)
+Make sure the following are installed:
 
-### Step-by-Step Setup
+- Python 3.10 or higher
+- pip
+- Git
+- Virtual environment support
+
+### 1. Clone the Repository
 
 ```bash
-# 1. Clone the repository
 git clone https://github.com/yourusername/book-management-api.git
 cd book-management-api
+```
 
-# 2. Create and activate virtual environment
+### 2. Create a Virtual Environment
+
+```bash
 python -m venv venv
+```
 
-# On Windows
+### 3. Activate the Virtual Environment
+
+**Windows:**
+
+```bash
 venv\Scripts\activate
+```
 
-# On macOS/Linux
+**macOS / Linux:**
+
+```bash
 source venv/bin/activate
+```
 
-# 3. Install dependencies
-pip install --upgrade pip
+### 4. Install Dependencies
+
+```bash
+python -m pip install --upgrade pip
 pip install -r requirements.txt
+```
 
-# 4. Copy environment variables
+### 5. Configure Environment Variables
+
+Copy the example environment file:
+
+```bash
 cp .env.example .env
+```
 
-# 5. Apply database migrations
+For Windows, you can also create `.env` manually from `.env.example`.
+
+### 6. Apply Database Migrations
+
+```bash
 python manage.py makemigrations
 python manage.py migrate
+```
 
-# 6. Create superuser (for admin access)
+### 7. Create a Superuser
+
+```bash
 python manage.py createsuperuser
-# Follow prompts to create username, email, password
+```
 
-# 7. Load sample data (optional)
-python manage.py shell
-# Run the sample data creation script from docs/load_sample_data.py
+Follow the prompts to create the administrator account.
 
-# 8. Start development server
+### 8. Start the Development Server
+
+```bash
 python manage.py runserver
 ```
 
-The API will be available at `http://127.0.0.1:8000/`
+The API will be available at:
+
+```text
+http://127.0.0.1:8000/
+```
 
 ---
 
-## Configuration
+## ⚙️ Configuration
 
-### Environment Variables (.env)
+The application uses environment variables for important settings.
+
+Example `.env` configuration:
 
 ```env
-# Django Settings
+# Django
 SECRET_KEY=your-secret-key-here
 DEBUG=True
 ALLOWED_HOSTS=localhost,127.0.0.1
 
-# Database (for production)
+# Database
 DATABASE_URL=postgresql://user:password@localhost:5432/dbname
 
-# JWT Settings
-JWT_ACCESS_TOKEN_LIFETIME=60  # minutes
-JWT_REFRESH_TOKEN_LIFETIME=1  # days
+# JWT
+JWT_ACCESS_TOKEN_LIFETIME=60
+JWT_REFRESH_TOKEN_LIFETIME=1
 
 # Throttling
 ANON_THROTTLE_RATE=100/day
@@ -238,78 +287,102 @@ USER_THROTTLE_RATE=1000/day
 PAGE_SIZE=5
 ```
 
-### Key Settings Explanation
+### JWT Configuration
 
-**JWT Configuration:**
-- Access tokens expire after 60 minutes (short-lived for security)
-- Refresh tokens expire after 1 day (can be used to get new access tokens)
-- Uses HS256 algorithm (symmetric signing)
-- Tokens sent in Authorization header: `Bearer <token>`
+- Access tokens expire after **60 minutes**.
+- Refresh tokens expire after **1 day**.
+- Tokens are sent through the `Authorization` header.
+- Authentication format:
 
-**Throttling:**
-```python
-'DEFAULT_THROTTLE_RATES': {
-    'anon': '100/day',   # Unauthenticated users: 100 requests/day
-    'user': '1000/day'   # Authenticated users: 1000 requests/day
-}
+```text
+Authorization: Bearer <access_token>
 ```
 
-**Pagination:**
-- 5 items per page by default
-- Can be overridden with `?page_size=10` parameter
-- Max page size: 100
+### Pagination
+
+The default page size is **5 items**.
+
+Example:
+
+```text
+/api/books/?page=2
+```
+
+A custom page size can be requested using:
+
+```text
+/api/books/?page_size=10
+```
+
+The maximum page size is **100**.
 
 ---
 
-## API Documentation
+# 📡 API Documentation
 
-### Authentication Endpoints
+## 🔐 Authentication Endpoints
 
-#### 1. Obtain Token
+### 1. Obtain Access Token
+
 ```http
 POST /api/token/
 ```
 
-**Request:**
+#### Request
+
 ```json
 {
     "username": "admin",
-    "password": "secret123"
+    "password": "your-password"
 }
 ```
 
-**Response:**
+#### Response
+
 ```json
 {
-    "access": "eyJhbGciOiJIUzI1NiIs...",
-    "refresh": "eyJhbGciOiJIUzI1NiIs..."
-}
-```
-
-#### 2. Refresh Token
-```http
-POST /api/token/refresh/
-```
-
-**Request:**
-```json
-{
-    "refresh": "eyJhbGciOiJIUzI1NiIs..."
-}
-```
-
-**Response:**
-```json
-{
-    "access": "eyJhbGciOiJIUzI1NiIs..."
+    "access": "your-access-token",
+    "refresh": "your-refresh-token"
 }
 ```
 
 ---
 
-### Book Endpoints
+### 2. Refresh Access Token
 
-#### List All Books (Public)
+```http
+POST /api/token/refresh/
+```
+
+#### Request
+
+```json
+{
+    "refresh": "your-refresh-token"
+}
+```
+
+#### Response
+
+```json
+{
+    "access": "new-access-token"
+}
+```
+
+---
+
+# 📚 Book Endpoints
+
+## 1. List All Books
+
+**Public endpoint**
+
+```http
+GET /api/books/
+```
+
+### Examples
 
 ```http
 GET /api/books/
@@ -319,7 +392,8 @@ GET /api/books/?search=Python
 GET /api/books/?ordering=-price
 ```
 
-**Response (Paginated):**
+### Example Response
+
 ```json
 {
     "count": 7,
@@ -338,20 +412,35 @@ GET /api/books/?ordering=-price
 }
 ```
 
-#### Get Single Book (Public)
+---
+
+## 2. Get a Single Book
+
+**Public endpoint**
 
 ```http
 GET /api/books/{id}/
 ```
 
-#### Create Book (Authenticated)
+Example:
+
+```http
+GET /api/books/1/
+```
+
+---
+
+## 3. Create a Book
+
+**Authentication required**
 
 ```http
 POST /api/books/
 Authorization: Bearer <access_token>
 ```
 
-**Request:**
+### Request
+
 ```json
 {
     "title": "Django for Professionals",
@@ -362,15 +451,31 @@ Authorization: Bearer <access_token>
 }
 ```
 
-#### Update Book (Authenticated)
+---
+
+## 4. Update a Book
+
+**Authentication required**
+
+### Full Update
 
 ```http
-PUT /api/books/{id}/      # Full update
-PATCH /api/books/{id}/    # Partial update
+PUT /api/books/{id}/
 Authorization: Bearer <access_token>
 ```
 
-#### Delete Book (Authenticated)
+### Partial Update
+
+```http
+PATCH /api/books/{id}/
+Authorization: Bearer <access_token>
+```
+
+---
+
+## 5. Delete a Book
+
+**Authentication required**
 
 ```http
 DELETE /api/books/{id}/
@@ -379,33 +484,55 @@ Authorization: Bearer <access_token>
 
 ---
 
-### Query Parameters
+# 🔎 Query Parameters
 
-| Parameter | Type | Description | Example |
-|-----------|------|-------------|---------|
-| `category` | String | Filter by category | `?category=Programming` |
-| `author` | String | Filter by author | `?author=John%20Doe` |
-| `search` | String | Search across title and author | `?search=Python` |
-| `ordering` | String | Order by field (prefix - for descending) | `?ordering=-price` |
-| `page` | Integer | Page number for pagination | `?page=2` |
-| `page_size` | Integer | Items per page (max 100) | `?page_size=10` |
+| Parameter | Description | Example |
+|---|---|---|
+| `category` | Filter by category | `?category=Programming` |
+| `author` | Filter by author | `?author=John%20Doe` |
+| `search` | Search title and author | `?search=Python` |
+| `ordering` | Sort results | `?ordering=-price` |
+| `page` | Select page number | `?page=2` |
+| `page_size` | Set number of results | `?page_size=10` |
+
+### Combined Query
+
+Multiple parameters can be used in a single request:
+
+```http
+GET /api/books/?search=Python&ordering=-price&page=2
+```
+
+This request:
+
+- Searches for books containing **Python**
+- Sorts results by price in descending order
+- Returns the second page
+- Applies pagination and throttling rules
 
 ---
 
-## Testing
+# 🧪 Testing
 
-### Using cURL
+## Using cURL
+
+### 1. Get Authentication Token
 
 ```bash
-# 1. Get Authentication Token
 curl -X POST http://localhost:8000/api/token/ \
   -H "Content-Type: application/json" \
-  -d '{"username": "admin", "password": "secret123"}'
+  -d '{"username":"admin","password":"your-password"}'
+```
 
-# 2. List Books (Public)
+### 2. List Books
+
+```bash
 curl http://localhost:8000/api/books/
+```
 
-# 3. Create Book (Authenticated)
+### 3. Create a Book
+
+```bash
 curl -X POST http://localhost:8000/api/books/ \
   -H "Authorization: Bearer <access_token>" \
   -H "Content-Type: application/json" \
@@ -416,20 +543,29 @@ curl -X POST http://localhost:8000/api/books/ \
     "price": 29.99,
     "published_date": "2019-05-03"
   }'
+```
 
-# 4. Filter by Category
+### 4. Filter Books
+
+```bash
 curl "http://localhost:8000/api/books/?category=Programming"
+```
 
-# 5. Search
+### 5. Search Books
+
+```bash
 curl "http://localhost:8000/api/books/?search=Python"
+```
 
-# 6. Order by Price (Descending)
+### 6. Order by Price
+
+```bash
 curl "http://localhost:8000/api/books/?ordering=-price"
+```
 
-# 7. Combined Query
-curl "http://localhost:8000/api/books/?search=Python&ordering=-price&page=2"
+### 7. Update a Book
 
-# 8. Update Book
+```bash
 curl -X PUT http://localhost:8000/api/books/1/ \
   -H "Authorization: Bearer <access_token>" \
   -H "Content-Type: application/json" \
@@ -440,101 +576,194 @@ curl -X PUT http://localhost:8000/api/books/1/ \
     "price": 59.99,
     "published_date": "2024-01-01"
   }'
+```
 
-# 9. Delete Book
+### 8. Delete a Book
+
+```bash
 curl -X DELETE http://localhost:8000/api/books/1/ \
   -H "Authorization: Bearer <access_token>"
 ```
 
-### Using Postman
+---
 
-1. Import the collection (if available in `/postman` directory)
-2. Set environment variables:
-   - `base_url`: http://localhost:8000
-   - `access_token`: obtained from `/api/token/`
-3. Test endpoints with authentication
+## 📮 Testing with Postman
+
+You can also test the API using **Postman**.
+
+1. Set the base URL:
+
+```text
+http://localhost:8000
+```
+
+2. Obtain an access token from:
+
+```text
+POST /api/token/
+```
+
+3. Add the token to protected requests:
+
+```text
+Authorization: Bearer <access_token>
+```
+
+4. Test GET, POST, PUT, PATCH, and DELETE endpoints.
 
 ---
 
-## Deployment
+# ❌ Error Handling
 
-### Production Checklist
+The API uses standard HTTP status codes.
 
-- [ ] Change `SECRET_KEY` to strong random value
-- [ ] Set `DEBUG = False`
-- [ ] Update `ALLOWED_HOSTS` with production domains
-- [ ] Switch to PostgreSQL/MySQL database
-- [ ] Configure SSL/HTTPS
-- [ ] Set up environment variables in production
-- [ ] Enable logging and monitoring
-- [ ] Configure CORS settings
-- [ ] Run security checks: `python manage.py check --deploy`
-- [ ] Set up database backups
+| Status | Meaning | Typical Cause |
+|---|---|---|
+| **400** | Bad Request | Invalid data |
+| **401** | Unauthorized | Missing or invalid authentication |
+| **403** | Forbidden | Insufficient permission |
+| **404** | Not Found | Resource does not exist |
+| **429** | Too Many Requests | Rate limit exceeded |
 
-### Deploy to Production (Example with Gunicorn + Nginx)
+### Example
 
-```bash
-# 1. Install production dependencies
-pip install gunicorn psycopg2-binary
-
-# 2. Collect static files
-python manage.py collectstatic --noinput
-
-# 3. Run migrations
-python manage.py migrate
-
-# 4. Start Gunicorn
-gunicorn --workers 4 --bind 0.0.0.0:8000 book_management.wsgi
-
-# 5. Configure Nginx (example)
-# /etc/nginx/sites-available/book-api
-server {
-    listen 80;
-    server_name api.yourdomain.com;
-    
-    location / {
-        proxy_pass http://localhost:8000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
+```json
+{
+    "detail": "Authentication credentials were not provided."
 }
 ```
 
-### Docker Deployment
+---
+
+# 🐛 Debugging
+
+### Database Problems
+
+If you need to reset the development database:
+
+```bash
+python manage.py flush
+python manage.py makemigrations
+python manage.py migrate
+```
+
+### JWT Problems
+
+Check the following:
+
+- The token is valid.
+- The token has not expired.
+- The request contains the correct header.
+- The authentication format is:
+
+```text
+Authorization: Bearer <access_token>
+```
+
+If the access token has expired, use the refresh endpoint.
+
+### Permission Problems
+
+Make sure:
+
+- The user is authenticated.
+- The correct access token is being used.
+- The user has the required permissions.
+
+---
+
+# 🚀 Deployment
+
+Before deploying to production, complete the following checklist:
+
+- [ ] Generate a strong `SECRET_KEY`
+- [ ] Set `DEBUG=False`
+- [ ] Configure production `ALLOWED_HOSTS`
+- [ ] Use PostgreSQL or another production-ready database
+- [ ] Configure HTTPS/SSL
+- [ ] Store secrets in environment variables
+- [ ] Configure CORS properly
+- [ ] Enable logging and monitoring
+- [ ] Configure database backups
+- [ ] Run Django security checks
+
+Run:
+
+```bash
+python manage.py check --deploy
+```
+
+---
+
+## Gunicorn Deployment
+
+Install production dependencies:
+
+```bash
+pip install gunicorn psycopg2-binary
+```
+
+Collect static files:
+
+```bash
+python manage.py collectstatic --noinput
+```
+
+Apply migrations:
+
+```bash
+python manage.py migrate
+```
+
+Start Gunicorn:
+
+```bash
+gunicorn --workers 4 \
+         --bind 0.0.0.0:8000 \
+         book_management.wsgi
+```
+
+A reverse proxy such as **Nginx** can be placed in front of Gunicorn to handle incoming HTTP/HTTPS traffic.
+
+---
+
+## 🐳 Docker Deployment
+
+Example `Dockerfile`:
 
 ```dockerfile
-# Dockerfile
 FROM python:3.10-slim
 
 WORKDIR /app
+
 COPY requirements.txt .
-RUN pip install -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
 COPY . .
 
 CMD ["gunicorn", "--workers", "4", "--bind", "0.0.0.0:8000", "book_management.wsgi"]
 ```
 
-```yaml
-# docker-compose.yml
-version: '3.8'
+Example `docker-compose.yml`:
 
+```yaml
 services:
   web:
     build: .
     ports:
       - "8000:8000"
     environment:
-      - DEBUG=False
-      - SECRET_KEY=${SECRET_KEY}
+      DEBUG: "False"
+      SECRET_KEY: ${SECRET_KEY}
     depends_on:
       - db
 
   db:
     image: postgres:15
     environment:
-      - POSTGRES_DB=books
-      - POSTGRES_USER=books_user
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      POSTGRES_DB: books
+      POSTGRES_USER: books_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -544,62 +773,58 @@ volumes:
 
 ---
 
-## Error Handling
+# 🤝 Contributing
 
-### Common Error Responses
+Contributions are welcome.
 
-| Status Code | Message | When? |
-|-------------|---------|-------|
-| 400 Bad Request | Validation errors | Invalid data sent |
-| 401 Unauthorized | "Authentication credentials were not provided." | No/invalid token |
-| 403 Forbidden | "You do not have permission..." | Non-authenticated user trying write operation |
-| 404 Not Found | "Not found." | Resource doesn't exist |
-| 429 Too Many Requests | "Request was throttled..." | Rate limit exceeded |
+### Steps
 
-### Debugging Tips
+1. Fork the repository.
+2. Create a feature branch:
 
-**Database Error?**
 ```bash
-python manage.py flush  # Clear database
-python manage.py migrate books zero  # Reset migrations
-python manage.py makemigrations
-python manage.py migrate
+git checkout -b feature/amazing-feature
 ```
 
-**JWT Token Issues?**
-- Verify token is included in header: `Authorization: Bearer <token>`
-- Check token is valid and not expired
-- Use refresh endpoint to get new token
+3. Commit your changes:
 
-**Permission Denied?**
-- Ensure user is authenticated before write operations
-- Check user permissions in Django admin
+```bash
+git commit -m "Add amazing feature"
+```
 
----
+4. Push the branch:
 
-## Contributing
+```bash
+git push origin feature/amazing-feature
+```
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Commit changes: `git commit -m 'Add amazing feature'`
-4. Push to branch: `git push origin feature/amazing-feature`
-5. Open a Pull Request
+5. Open a Pull Request.
 
 ---
 
-## License
+# 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **MIT License**.
 
----
-
-## Support
-
-For support, email your-email@example.com or create an issue in the GitHub repository.
+See the `LICENSE` file for more information.
 
 ---
 
-**Made with ❤️ using Django REST Framework**#   B o o k _  
- #   B o o k _  
- #   b o o k A p i _ o s t a d  
- 
+# 📞 Support
+
+If you encounter an issue, please create an issue in the GitHub repository with:
+
+- A clear description of the problem
+- Steps to reproduce it
+- Relevant error messages
+- Environment details
+
+---
+
+<div align="center">
+
+### ❤️ Built with Django REST Framework
+
+**Book Management REST API**
+
+</div>
